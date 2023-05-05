@@ -149,6 +149,15 @@ steps_done = 0
 episode_rewards = []
 losses = []  # List to store the loss values
 num_episodes = 1000  # or any other number of episodes you want to train for
+# Define a variable to store the current step
+steps = []
+# Define a function to update the plot
+def update_plot(losses):
+    plt.plot(steps, losses)
+    plt.xlabel('Steps')
+    plt.ylabel('Loss')
+    plt.show(block=False)
+    plt.pause(0.001)
 
 # Train the model over the episodes
 best_reward = float('-inf')
@@ -192,6 +201,9 @@ for i_episode in range(num_episodes):
         loss = optimize_model()
         if loss is not None:
             losses.append(loss)
+            steps.append(steps_done)
+            if steps_done % LOG_INTERVAL == 0:
+                update_plot(losses)
 
         # Update the target network
         if steps_done % TARGET_UPDATE == 0:
@@ -219,8 +231,5 @@ for i_episode in range(num_episodes):
 # Close the environment
 env.close()
 
-# Plot the loss values
-plt.plot(losses)
-plt.xlabel('Steps')
-plt.ylabel('Loss')
-plt.show()
+# Final update of the plot
+update_plot(losses)
