@@ -152,12 +152,20 @@ num_episodes = 1000  # or any other number of episodes you want to train for
 # Define a variable to store the current step
 steps = []
 # Define a function to update the plot
-def update_plot(losses):
-    plt.plot(steps, losses)
-    plt.xlabel('Steps')
-    plt.ylabel('Loss')
-    plt.show(block=False)
-    plt.pause(0.001)
+def update_plot(losses, steps, ax1, ax2):
+    # Plot the logarithm of the loss values in the first subplot
+    log_losses = np.log(losses)
+    ax1.plot(steps, log_losses)
+    ax1.set_ylabel('Log Loss')
+
+    # Plot the moving average of the loss values in the second subplot
+    window_size = min(100, len(losses))
+    moving_average = np.convolve(losses, np.ones(window_size)/window_size, mode='valid')
+    ax2.plot(steps[window_size-1:], moving_average)
+    ax2.set_xlabel('Steps')
+    ax2.set_ylabel('Moving Average Loss')
+
+    return ax1, ax2
 
 # Train the model over the episodes
 best_reward = float('-inf')
@@ -173,6 +181,9 @@ for i_episode in range(num_episodes):
     state = env.reset()
     state = preprocess(state)
 
+    # Initialize the figure and the axes
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    # Train the model over the episodes
     for t in count():
         # Select an action using an epsilon-greedy policy
         eps_threshold = EPS_END + (EPS_START - EPS_END) * \
@@ -203,7 +214,9 @@ for i_episode in range(num_episodes):
             losses.append(loss)
             steps.append(steps_done)
             if steps_done % LOG_INTERVAL == 0:
-                update_plot(losses)
+                # Update the plot with the new loss value
+                update_plot(losses, steps, ax1, ax2)
+                plt.pause(0.001)
 
         # Update the target network
         if steps_done % TARGET_UPDATE == 0:
@@ -232,4 +245,4 @@ for i_episode in range(num_episodes):
 env.close()
 
 # Final update of the plot
-update_plot(losses)
+plt.close()
