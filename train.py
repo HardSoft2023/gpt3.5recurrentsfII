@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from itertools import count
 import torch
 from collections import namedtuple
+import matplotlib.pyplot as plt
 
 # Define the device to use (either 'cpu' or 'cuda')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -94,7 +95,7 @@ def select_action(model, state, eps_threshold):
 # Define the optimization function
 def optimize_model():
     if len(memory) < BATCH_SIZE:
-        return
+        return None
     transitions = memory.sample(BATCH_SIZE)
     batch = Transition(*zip(*transitions))
 
@@ -127,6 +128,8 @@ def optimize_model():
         param.grad.data.clamp_(-1, 1)
     optimizer.step()
 
+    return loss.item()
+
 # Initialize the environment
 env = retro.make(game='StreetFighterIISpecialChampionEdition-Genesis')
 
@@ -144,6 +147,7 @@ state = preprocess(state)
 eps_threshold = EPS_START
 steps_done = 0
 episode_rewards = []
+losses = []  # List to store the loss values
 num_episodes = 1000  # or any other number of episodes you want to train for
 
 # Train the model over the episodes
@@ -176,27 +180,37 @@ for i_episode in range(num_episodes):
         episode_reward += reward.item()
         steps_done += 1
 
-        # Optimize the model
-        optimize_model()
+        # Optimize the model and store the loss value
+        loss = optimize_model()
+        if loss is not None:
+            losses.append(loss)
+
+        # Update the target network
         if steps_done % TARGET_UPDATE == 0:
             target_net.load_state_dict(policy_net.state_dict())
 
+        # Render the game screen and print the action taken by the model
+        env.render()
+        print(f"Action taken: {action}")
+
         if done:
             episode_rewards.append(episode_reward)
+            print(f"Episode {i_episode + 1} finished after {t + 1} steps with reward {episode_reward}")
             break
 
-    # Save the best model every 100 steps
-    if episode_reward > best_reward and i_episode % 100 == 0:
-        best_reward = episode_reward
-        torch.save(policy_net.state_dict(), 'best_model.pth')
-
-    # Print progress
-    if i_episode % LOG_INTERVAL == 0:
-        print('Episode {}\tAverage reward: {:.2f}'.format(
-            i_episode, np.mean(episode_rewards[-LOG_INTERVAL:])))
-
-# Save the final model
-torch.save(policy_net.state_dict(), 'final_model.pth')
+    # Print the average episode reward over the last 100 episodes
+    if i_episode >= 99:
+        avg_reward = sum(episode_rewards[-100:]) / 100
+        if avg_reward > best_reward:
+            best_reward = avg_reward
+            torch.save(policy_net.state_dict(), 'best_model.pt')
+        print(f"Episode {i_episode + 1}, average reward over the last 100 episodes: {avg_reward:.2f}")
 
 # Close the environment
 env.close()
+
+# Plot the loss values
+plt.plot(losses)
+plt.xlabel('Steps')
+plt.ylabel('Loss')
+plt.show()
