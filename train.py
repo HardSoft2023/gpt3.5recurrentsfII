@@ -152,8 +152,15 @@ num_episodes = 1000  # or any other number of episodes you want to train for
 
 # Train the model over the episodes
 best_reward = float('-inf')
+episode_rewards = []
+episode_lengths = []
+losses = []  # List to store the loss values
+num_episodes = 1000  # or any other number of episodes you want to train for
+
+# Train the model over the episodes
 for i_episode in range(num_episodes):
     episode_reward = 0
+    episode_length = 0
     state = env.reset()
     state = preprocess(state)
 
@@ -178,6 +185,7 @@ for i_episode in range(num_episodes):
         # Move to the next state
         state = next_state
         episode_reward += reward.item()
+        episode_length += 1
         steps_done += 1
 
         # Optimize the model and store the loss value
@@ -191,20 +199,22 @@ for i_episode in range(num_episodes):
 
         # Render the game screen and print the action taken by the model
         env.render()
-        print(f"Action taken: {action}")
+        # print(f"Action taken: {action}")
 
         if done:
             episode_rewards.append(episode_reward)
-            print(f"Episode {i_episode + 1} finished after {t + 1} steps with reward {episode_reward}")
+            episode_lengths.append(episode_length)
+            print(f"Episode {i_episode + 1} finished after {episode_length} steps with reward {episode_reward}")
             break
 
-    # Print the average episode reward over the last 100 episodes
-    if i_episode >= 99:
-        avg_reward = sum(episode_rewards[-100:]) / 100
+    # Print the average episode reward and length over the last 10 episodes
+    if i_episode >= 9:
+        avg_reward = sum(episode_rewards[-10:]) / 10
+        avg_length = sum(episode_lengths[-10:]) / 10
         if avg_reward > best_reward:
             best_reward = avg_reward
             torch.save(policy_net.state_dict(), 'best_model.pt')
-        print(f"Episode {i_episode + 1}, average reward over the last 100 episodes: {avg_reward:.2f}")
+        print(f"Episode {i_episode + 1}, average reward over the last 10 episodes: {avg_reward:.2f}, average length: {avg_length:.2f}")
 
 # Close the environment
 env.close()
