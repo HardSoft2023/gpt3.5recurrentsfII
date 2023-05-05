@@ -75,7 +75,6 @@ class DQN(nn.Module):
         return x
 
 # Define the select action function
-# Define the select action function
 def select_action(model, state, eps_threshold):
     sample = random.random()
     if sample > eps_threshold:
@@ -148,6 +147,7 @@ episode_rewards = []
 num_episodes = 1000  # or any other number of episodes you want to train for
 
 # Train the model over the episodes
+best_reward = float('-inf')
 for i_episode in range(num_episodes):
     episode_reward = 0
     state = env.reset()
@@ -185,10 +185,18 @@ for i_episode in range(num_episodes):
             episode_rewards.append(episode_reward)
             break
 
+    # Save the best model every 100 steps
+    if episode_reward > best_reward and i_episode % 100 == 0:
+        best_reward = episode_reward
+        torch.save(policy_net.state_dict(), 'best_model.pth')
+
     # Print progress
     if i_episode % LOG_INTERVAL == 0:
         print('Episode {}\tAverage reward: {:.2f}'.format(
             i_episode, np.mean(episode_rewards[-LOG_INTERVAL:])))
+
+# Save the final model
+torch.save(policy_net.state_dict(), 'final_model.pth')
 
 # Close the environment
 env.close()
